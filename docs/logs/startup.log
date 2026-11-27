@@ -1,0 +1,16 @@
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [NestFactory] Starting Nest application...
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [InstanceLoader] PassportModule dependencies initialized +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [InstanceLoader] JwtModule dependencies initialized +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [InstanceLoader] UsersModule dependencies initialized +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RoutesResolver] GadgetsController {/gadgets}: +6ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RoutesResolver] BrandsController {/brands}: +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RoutesResolver] FeaturesController {/features}: +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RoutesResolver] OrdersController {/orders}: +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RoutesResolver] AuthController {/auth}: +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RouterExplorer] Mapped {/auth/register, POST} route +1ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RouterExplorer] Mapped {/auth/login, POST} route +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RouterExplorer] Mapped {/auth/me, GET} route +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RouterExplorer] Mapped {/auth/refresh, POST} route +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [RouterExplorer] Mapped {/auth/logout, POST} route +0ms
+[Nest] 73567  - 11/27/2026, 11:15:50 AM     LOG [NestApplication] Nest application successfully started +1ms

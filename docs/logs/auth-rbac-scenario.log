@@ -1,0 +1,60 @@
+== register
+{"id":"cd07f461-e2be-4a04-95bb-b4ed49c18d4d","email":"buyer@example.com","role":"CUSTOMER","createdAt":"2026-11-27T10:16:31.129Z","updatedAt":"2026-11-27T10:16:31.129Z"}
+== register dup
+{"statusCode":409,"message":"Користувач з таким email вже існує"}
+== register weak + role injection
+{"statusCode":400,"message":["property role should not exist","Некоректний email","Пароль має містити щонайменше одну літеру та одну цифру","Пароль має містити щонайменше 6 символів"]}
+== login wrong pass
+{"statusCode":401,"message":"Невірні облікові дані"}
+== login customer
+HTTP/1.1 200 OK
+Set-Cookie: refreshToken=eyJhbGciOiJI...; Max-Age=604800; Path=/auth; Expires=Fri, 04 Dec 2026 10:16:31 GMT; HttpOnly; SameSite=Strict
+== me no token
+{"statusCode":401,"message":"Unauthorized"}
+== me
+{"id":"cd07f461-e2be-4a04-95bb-b4ed49c18d4d","email":"buyer@example.com","role":"CUSTOMER","createdAt":"2026-11-27T10:16:31.129Z","updatedAt":"2026-11-27T10:16:31.405Z"}
+== public GET /gadgets /brands /features
+200
+200
+200
+== customer POST gadget
+{"statusCode":403,"message":"Недостатньо прав для виконання операції","error":"Forbidden"}
+== customer POST brand
+{"statusCode":403,"message":"Недостатньо прав для виконання операції"}
+== customer POST feature
+{"statusCode":403,"message":"Недостатньо прав для виконання операції"}
+== anon POST gadget
+{"statusCode":401,"message":"Unauthorized"}
+== anon GET orders
+401
+== manager POST brand
+{"id":"94cf45f4-9e00-4ece-a65c-e17a973dac53","name":"NordTech-6855","country":"Finland","createdAt":"2026-11-27T10:16:31.703Z"}
+== manager POST gadget
+{"id":"a0d512c5-57fa-4d68-a59f-18a95571609a","title":"Новий смартфон","price":25000,"statusCode":null,"message":null}
+== manager PATCH
+200
+== manager DELETE permanent (ADMIN only)
+{"statusCode":403,"message":"Недостатньо прав для виконання операції"}
+== manager DELETE soft
+204
+== admin DELETE permanent
+204
+== refresh
+HTTP/1.1 200 OK
+Set-Cookie: refreshToken=eyJhbGciOiJI...; Max-Age=604800; Path=/auth; Expires=Fri, 04 Dec 2026 10:16:31 GMT; HttpOnly; SameSite=Strict
+{"accessToken":"eyJhbGciOiJI..."}
+rotated: yes
+== refresh with OLD token (reuse)
+{"statusCode":401,"message":"Refresh token відкликано"}
+== refresh with NEW after reuse detection
+{"statusCode":401,"message":"Сесію завершено"}
+== login again -> logout
+HTTP/1.1 204 No Content
+Set-Cookie: refreshToken=; Path=/auth; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Strict
+admin@example.com|ADMIN|f|$2b$10$
+buyer@example.com|CUSTOMER|t|$2b$10$
+manager@example.com|STORE_MANAGER|f|$2b$10$
+== refresh after logout
+{"statusCode":401,"message":"Сесію завершено"}
+== tampered access token
+401

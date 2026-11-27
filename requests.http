@@ -1,0 +1,233 @@
+@host = http://localhost:3000
+
+# Перед запуском:
+#   docker compose up -d
+#   npm run migration:run
+#   npm run seed:users        # ADMIN та STORE_MANAGER з .env
+#   npm run start:dev
+#
+# Запити виконуються по черзі згори вниз: токени та id беруться з відповідей
+# іменованих запитів (# @name). REST Client зберігає cookie автоматично,
+# тому refreshToken з Set-Cookie сам надсилається на /auth/refresh і /auth/logout.
+
+########## РІВЕНЬ 1: реєстрація, логін, профіль ##########
+
+### 1. Реєстрація покупця -> 201, role = CUSTOMER, без passwordHash
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "buyer@example.com",
+  "password": "strongPassword123"
+}
+
+### 2. Повторна реєстрація -> 409 Conflict
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "buyer@example.com",
+  "password": "strongPassword123"
+}
+
+### 3. Невалідні дані + спроба призначити собі роль -> 400
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "not-an-email",
+  "password": "abc",
+  "role": "ADMIN"
+}
+
+### 4. Логін з невірним паролем -> 401 «Невірні облікові дані»
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer@example.com",
+  "password": "wrongPassword1"
+}
+
+### 5. Логін покупця -> 200, accessToken у тілі, refreshToken у Set-Cookie (HttpOnly)
+# @name customer
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer@example.com",
+  "password": "strongPassword123"
+}
+
+@customerToken = {{customer.response.body.accessToken}}
+
+### 6. Профіль без токена -> 401
+GET {{host}}/auth/me
+
+### 7. Профіль з токеном -> 200
+GET {{host}}/auth/me
+Authorization: Bearer {{customerToken}}
+
+########## РІВЕНЬ 2: @Public та RBAC ##########
+
+### 8. Публічний перегляд товарів (без токена) -> 200
+# @name list
+GET {{host}}/gadgets
+
+### 9. Публічний перегляд брендів -> 200
+GET {{host}}/brands
+
+### 10. Покупець створює гаджет -> 403 «Недостатньо прав для виконання операції»
+POST {{host}}/gadgets
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "title": "Новий смартфон",
+  "price": 25000
+}
+
+### 11. Покупець створює бренд -> 403
+POST {{host}}/brands
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "name": "HackBrand"
+}
+
+### 12. Анонімне створення -> 401 (спершу автентифікація, потім ролі)
+POST {{host}}/gadgets
+Content-Type: application/json
+
+{
+  "title": "Новий смартфон",
+  "price": 25000
+}
+
+### 13. Логін менеджера магазину
+# @name manager
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@example.com",
+  "password": "Manager12345"
+}
+
+@managerToken = {{manager.response.body.accessToken}}
+
+### 14. Менеджер створює бренд -> 201
+# @name brand
+POST {{host}}/brands
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "name": "NordTech",
+  "country": "Finland"
+}
+
+@brandId = {{brand.response.body.id}}
+
+### 15. Менеджер створює гаджет -> 201
+# @name created
+POST {{host}}/gadgets
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "title": "Новий смартфон",
+  "price": 25000,
+  "cpu": "Snapdragon 8 Gen 3",
+  "ramGb": 12,
+  "stock": 5,
+  "brandId": "{{brandId}}",
+  "features": ["5G", "AMOLED"]
+}
+
+@gadgetId = {{created.response.body.id}}
+
+### 16. Менеджер редагує гаджет -> 200
+PATCH {{host}}/gadgets/{{gadgetId}}
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "price": 23999
+}
+
+### 17. Покупець видаляє гаджет -> 403
+DELETE {{host}}/gadgets/{{gadgetId}}
+Authorization: Bearer {{customerToken}}
+
+### 18. Менеджер — фізичне видалення (лише ADMIN) -> 403
+DELETE {{host}}/gadgets/{{gadgetId}}/permanent
+Authorization: Bearer {{managerToken}}
+
+### 19. Менеджер — м'яке видалення -> 204
+DELETE {{host}}/gadgets/{{gadgetId}}
+Authorization: Bearer {{managerToken}}
+
+### 20. Логін адміністратора
+# @name admin
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "Admin12345"
+}
+
+@adminToken = {{admin.response.body.accessToken}}
+
+### 21. Адміністратор — фізичне видалення -> 204
+DELETE {{host}}/gadgets/{{gadgetId}}/permanent
+Authorization: Bearer {{adminToken}}
+
+########## РІВЕНЬ 3: refresh-ротація та logout ##########
+# Повний сценарій: Логін -> Дані -> Refresh -> Logout -> Refresh старим токеном = 401
+
+### 22. Логін покупця (новий refreshToken у cookie)
+# @name session
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "buyer@example.com",
+  "password": "strongPassword123"
+}
+
+### 23. Отримання даних з access токеном
+GET {{host}}/auth/me
+Authorization: Bearer {{session.response.body.accessToken}}
+
+### 24. Оновлення сесії: cookie надсилається автоматично -> 200, нова пара токенів
+# @name refreshed
+POST {{host}}/auth/refresh
+
+### 25. Новий access токен працює
+GET {{host}}/auth/me
+Authorization: Bearer {{refreshed.response.body.accessToken}}
+
+### 26. Logout -> 204, хеш у БД = NULL, cookie видалено (Expires 1970)
+POST {{host}}/auth/logout
+
+### 27. Refresh старим (вже ротованим) токеном -> 401
+# Заголовок Set-Cookie з кроку 24 підставляється як Cookie; cookie-parser
+# візьме з нього refreshToken, а атрибути (Path, HttpOnly…) проігнорує.
+# @no-cookie-jar
+POST {{host}}/auth/refresh
+Cookie: {{refreshed.response.headers.Set-Cookie}}
+
+### 28. Refresh без cookie після logout -> 401 «Refresh token відсутній»
+POST {{host}}/auth/refresh
+
+########## Інші маршрути ##########
+
+### 29. Замовлення доступні лише автентифікованим (без токена -> 401)
+GET {{host}}/orders
+
+### 30. Замовлення з токеном покупця -> 200
+GET {{host}}/orders
+Authorization: Bearer {{refreshed.response.body.accessToken}}
